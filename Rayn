@@ -1,0 +1,142 @@
+--// Auto Teleport Script with GUI + Anti AFK
+--// Script by Nothing
+
+-- CONFIG
+local checkpoints = {
+    Vector3.new(-551, 725, -383),
+    Vector3.new(412, 429, -40),
+    Vector3.new(270, 653, -456),
+    Vector3.new(256, 613, -278),
+    Vector3.new(868, 209, 133),
+    Vector3.new(31, 689, -459),
+    Vector3.new(-250, 685, -449),
+    Vector3.new(780, 341, 0),
+    Vector3.new(-559, 785, -588),
+    Vector3.new(-474, 905, -763),
+    Vector3.new(-74, 893, -766),
+    Vector3.new(338, 1069, -932),
+    Vector3.new(435, 1285, -807),
+    Vector3.new(672, 1665, -851),
+    Vector3.new(960, 1881, -866),
+    Vector3.new(631, 1877, -743),
+    Vector3.new(958, 1881, -867),
+    Vector3.new(970, 1936, -548) -- NEW checkpoint
+}
+
+local teleportDelay = 2 -- seconds between teleports
+
+-- SERVICES
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+-- STATE
+local teleportActive = false
+local currentIndex = 1
+
+-- FUNCTIONS
+local function teleport()
+    while teleportActive do
+        for i = currentIndex, #checkpoints do
+            if not teleportActive then break end
+            currentIndex = i
+            hrp.CFrame = CFrame.new(checkpoints[i])
+            task.wait(teleportDelay)
+        end
+        
+        -- if reached last checkpoint, respawn
+        if teleportActive then
+            player.Character:BreakJoints()
+            local newChar = player.CharacterAdded:Wait()
+            newChar:WaitForChild("HumanoidRootPart")
+            newChar:WaitForChild("Humanoid")
+
+            -- update references
+            char = newChar
+            hrp = char.HumanoidRootPart
+
+            -- fix camera stuck
+            workspace.CurrentCamera.CameraSubject = char:WaitForChild("Humanoid")
+
+            currentIndex = 1
+            task.wait(2)
+        end
+    end
+end
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 160, 0, 70)
+Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Frame.Active = true
+Frame.Draggable = true
+
+-- Title Bar
+local TitleBar = Instance.new("Frame", Frame)
+TitleBar.Size = UDim2.new(1, 0, 0.3, 0)
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+
+local Title = Instance.new("TextLabel", TitleBar)
+Title.Size = UDim2.new(0.8, 0, 1, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Script by Nothing"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextScaled = true
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Position = UDim2.new(0.05, 0, 0, 0)
+
+local MinimizeButton = Instance.new("TextButton", TitleBar)
+MinimizeButton.Size = UDim2.new(0.2, 0, 1, 0)
+MinimizeButton.Position = UDim2.new(0.8, 0, 0, 0)
+MinimizeButton.Text = "-"
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.Font = Enum.Font.SourceSansBold
+MinimizeButton.TextScaled = true
+
+-- Toggle Button
+local ToggleButton = Instance.new("TextButton", Frame)
+ToggleButton.Size = UDim2.new(0.9, 0, 0.5, 0)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.4, 0)
+ToggleButton.Text = "OFF"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0) -- red (default OFF)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextScaled = true
+
+-- TOGGLE EVENT
+ToggleButton.MouseButton1Click:Connect(function()
+    teleportActive = not teleportActive
+    if teleportActive then
+        ToggleButton.Text = "ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0) -- green
+        task.spawn(teleport)
+    else
+        ToggleButton.Text = "OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0) -- red
+    end
+end)
+
+-- MINIMIZE EVENT
+local minimized = false
+MinimizeButton.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    Frame.Size = minimized and UDim2.new(0, 160, 0, 25) or UDim2.new(0, 160, 0, 70)
+    ToggleButton.Visible = not minimized
+end)
+
+-- ANTI AFK
+task.spawn(function()
+    local vu = game:GetService("VirtualUser")
+    player.Idled:Connect(function()
+        vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        print("[Anti AFK] Prevented kick")
+    end)
+end)
