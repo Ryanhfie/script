@@ -1,0 +1,120 @@
+--// Auto Teleport Script with GUI + Anti AFK
+--// Script by Nothing
+
+-- CONFIG
+local checkpoints = {
+    Vector3.new(-472, 249, 776),
+    Vector3.new(-363, 388, 573),
+    Vector3.new(258, 430, 506),
+    Vector3.new(333, 486, 357),
+    Vector3.new(235, 314, -145),
+    Vector3.new(-617, 905, -551)
+}
+
+local teleportDelay = 2 -- seconds between teleports
+
+-- SERVICES
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+-- STATE
+local teleportActive = false
+local currentIndex = 1
+
+-- FUNCTIONS
+local function teleport()
+    while teleportActive do
+        for i = currentIndex, #checkpoints do
+            if not teleportActive then break end
+            currentIndex = i
+            hrp.CFrame = CFrame.new(checkpoints[i])
+            task.wait(teleportDelay)
+        end
+        
+        -- if reached last checkpoint, respawn
+        if teleportActive then
+            player.Character:BreakJoints()
+            local newChar = player.CharacterAdded:Wait()
+            hrp = newChar:WaitForChild("HumanoidRootPart")
+            currentIndex = 1
+            task.wait(2)
+        end
+    end
+end
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 160, 0, 70)
+Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Frame.Active = true
+Frame.Draggable = true
+
+-- Title Bar
+local TitleBar = Instance.new("Frame", Frame)
+TitleBar.Size = UDim2.new(1, 0, 0.3, 0)
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+
+local Title = Instance.new("TextLabel", TitleBar)
+Title.Size = UDim2.new(0.8, 0, 1, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Script by Nothing"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextScaled = true
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Position = UDim2.new(0.05, 0, 0, 0)
+
+local MinimizeButton = Instance.new("TextButton", TitleBar)
+MinimizeButton.Size = UDim2.new(0.2, 0, 1, 0)
+MinimizeButton.Position = UDim2.new(0.8, 0, 0, 0)
+MinimizeButton.Text = "-"
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.Font = Enum.Font.SourceSansBold
+MinimizeButton.TextScaled = true
+
+-- Toggle Button
+local ToggleButton = Instance.new("TextButton", Frame)
+ToggleButton.Size = UDim2.new(0.9, 0, 0.5, 0)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.4, 0)
+ToggleButton.Text = "OFF"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0) -- red (default OFF)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextScaled = true
+
+-- TOGGLE EVENT
+ToggleButton.MouseButton1Click:Connect(function()
+    teleportActive = not teleportActive
+    if teleportActive then
+        ToggleButton.Text = "ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0) -- green
+        task.spawn(teleport)
+    else
+        ToggleButton.Text = "OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0) -- red
+    end
+end)
+
+-- MINIMIZE EVENT
+local minimized = false
+MinimizeButton.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    Frame.Size = minimized and UDim2.new(0, 160, 0, 25) or UDim2.new(0, 160, 0, 70)
+    ToggleButton.Visible = not minimized
+end)
+
+-- ANTI AFK
+pcall(function()
+    local vu = game:GetService("VirtualUser")
+    player.Idled:Connect(function()
+        vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end)
+end)
